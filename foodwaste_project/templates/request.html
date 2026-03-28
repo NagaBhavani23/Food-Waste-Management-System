@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+
+{% block title %}Request Food - FeedForward{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-wrapper">
+        <h2>Request Food</h2>
+        <p>Submit a request for food to be fulfilled by donors</p>
+        
+        <form method="post" class="form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="food_type">Type of Food Needed *</label>
+                <input type="text" id="food_type" name="food_type" required placeholder="e.g., Rice, Vegetables, Cooked Meals">
+            </div>
+            
+            <div class="form-group">
+                <label for="quantity_needed">Quantity Needed *</label>
+                <input type="text" id="quantity_needed" name="quantity_needed" required placeholder="e.g., 10 kg, 20 servings">
+            </div>
+            
+            <div class="form-group">
+                <label for="location">Delivery Location *</label>
+                <input type="text" id="location" name="location" required placeholder="Where should the food be delivered?">
+            </div>
+            
+            <div class="form-group">
+                <label for="contact_number">Contact Number</label>
+                <input type="tel" id="contact_number" name="contact_number" placeholder="+91 98765 43210">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Additional Notes</label>
+                <textarea id="notes" name="notes" rows="4" placeholder="Any special requirements or preferences?"></textarea>
+            </div>
+            
+            <!-- Location Capture Section -->
+            <div class="location-section">
+                <h4>📍 Location Information</h4>
+                <p>Capture your current location to help donors locate you easily.</p>
+                <button type="button" class="location-button" onclick="captureReceiverLocation()">📍 Capture My Location</button>
+                <div id="locationStatus" class="location-status"></div>
+                <div id="locationCoordinates" class="location-coordinates">
+                    <strong>Coordinates:</strong><br>
+                    Latitude: <span id="latitude">-</span><br>
+                    Longitude: <span id="longitude">-</span>
+                </div>
+                <input type="hidden" id="receiverLatitude" name="latitude" value="">
+                <input type="hidden" id="receiverLongitude" name="longitude" value="">
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Submit Request</button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Available Donations Section -->
+<section class="available-donations-section">
+    <div class="container">
+        <h2>Available Donations for Your Request</h2>
+        {% if available_donations %}
+            <div class="donations-grid">
+                {% for donation in available_donations %}
+                    <div class="donation-card">
+                        <div class="donation-header">
+                            <h3>{{ donation.food_name }}</h3>
+                            <span class="status-badge">{{ donation.get_availability_status_display }}</span>
+                        </div>
+                        <div class="donation-body">
+                            <p><strong>Quantity:</strong> {{ donation.quantity }}</p>
+                            <p><strong>Location:</strong> {{ donation.location }}</p>
+                            <p><strong>Donor:</strong> {{ donation.donor.username }}</p>
+                            <p><strong>Contact:</strong> {{ donation.phone }}</p>
+                            {% if donation.description %}
+                                <p><strong>Description:</strong> {{ donation.description|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="donation-footer">
+                            <a href="{% url 'claim_donation' donation.id %}" class="btn btn-small">Claim This</a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data">No available donations at the moment.</p>
+        {% endif %}
+    </div>
+</section>
+
+<style>
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .form-actions .btn {
+        flex: 1;
+    }
+    
+    .available-donations-section {
+        margin-top: 40px;
+        padding: 20px 0;
+        background-color: #f9f9f9;
+    }
+    
+    .location-section {
+        background: white;
+        padding: 15px;
+        border-radius: 4px;
+        margin: 20px 0;
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .location-section h4 {
+        margin-top: 0;
+        color: #17a2b8;
+    }
+    
+    .location-button {
+        background: #17a2b8;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1em;
+        margin: 10px 5px 10px 0;
+        transition: background 0.3s;
+    }
+    
+    .location-button:hover {
+        background: #138496;
+    }
+    
+    .location-status {
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        display: none;
+        font-weight: 600;
+    }
+    
+    .location-status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+    }
+    
+    .location-status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+    }
+    
+    .location-coordinates {
+        background: #f0f0f0;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 0.9em;
+        display: none;
+    }
+    
+    .location-coordinates.shown {
+        display: block;
+    }
+</style>
+
+<script>
+function captureReceiverLocation() {
+    const statusEl = document.getElementById('locationStatus');
+    const coordEl = document.getElementById('locationCoordinates');
+    
+    if ("geolocation" in navigator) {
+        statusEl.textContent = '📍 Getting your location...';
+        statusEl.className = 'location-status success';
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Store in hidden inputs
+                document.getElementById('receiverLatitude').value = lat;
+                document.getElementById('receiverLongitude').value = lon;
+                
+                // Display coordinates
+                document.getElementById('latitude').textContent = lat.toFixed(6);
+                document.getElementById('longitude').textContent = lon.toFixed(6);
+                coordEl.classList.add('shown');
+                
+                statusEl.textContent = '✅ Location captured successfully!';
+                statusEl.className = 'location-status success';
+                
+                setTimeout(() => {
+                    statusEl.className = 'location-status';
+                }, 3000);
+            },
+            function(error) {
+                let errorMsg = 'Unable to get location';
+                if (error.code === error.PERMISSION_DENIED) {
+                    errorMsg = 'Permission denied. Please enable location access in your browser settings.';
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    errorMsg = 'Location information is unavailable.';
+                } else if (error.code === error.TIMEOUT) {
+                    errorMsg = 'Request timed out.';
+                }
+                
+                statusEl.textContent = '❌ Error: ' + errorMsg;
+                statusEl.className = 'location-status error';
+            }
+        );
+    } else {
+        statusEl.textContent = '❌ Geolocation is not supported by your browser';
+        statusEl.className = 'location-status error';
+    }
+}
+</script>
+
+{% endblock %}

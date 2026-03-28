@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - FeedForward{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="form-wrapper login-form">
+        <h2>Login to Your Account</h2>
+        
+        <form method="post" class="form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required placeholder="Enter your username">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required placeholder="Enter your password">
+            </div>
+            
+            <button type="submit" class="btn btn-large">Login</button>
+        </form>
+        
+        <p class="register-link">Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+        
+        <!-- Demo Credentials -->
+        <div class="demo-info">
+            <h4>Demo Credentials:</h4>
+            <p><strong>Username:</strong> admin</p>
+            <p><strong>Password:</strong> admin123</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

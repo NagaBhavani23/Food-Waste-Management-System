@@ -1,0 +1,223 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ donation.food_name }} - FeedForward{% endblock %}
+
+{% block content %}
+<div class="donation-detail-container">
+    <a href="{% url 'view_donations' %}" class="btn btn-small">&larr; Back to Donations</a>
+    
+    <div class="donation-detail-card">
+        <div class="detail-header">
+            <h1>{{ donation.food_name }}</h1>
+            <span class="status-badge status-{{ donation.status }}">
+                {{ donation.get_status_display }}
+            </span>
+        </div>
+        
+        <div class="detail-content">
+            <div class="detail-main">
+                <section class="detail-section">
+                    <h2>Donation Details</h2>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Quantity</label>
+                            <p>{{ donation.quantity }}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Location</label>
+                            <p>{{ donation.location }}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Contact Number</label>
+                            <p>{{ donation.contact_number|default:"Not provided" }}</p>
+                        </div>
+                        <div class="detail-item">
+                            <label>Posted Date</label>
+                            <p>{{ donation.created_at|date:"d M Y H:i" }}</p>
+                        </div>
+                    </div>
+                    
+                    {% if donation.description %}
+                        <div class="detail-item full-width">
+                            <label>Description</label>
+                            <p>{{ donation.description }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if donation.expiry_date %}
+                        <div class="detail-item full-width alert-warning">
+                            <label>Expiry Date</label>
+                            <p>{{ donation.expiry_date|date:"d M Y H:i" }}</p>
+                        </div>
+                    {% endif %}
+                </section>
+                
+                <section class="detail-section">
+                    <h2>Donor Information</h2>
+                    <div class="donor-info">
+                        <p><strong>Name:</strong> {{ donation.donor.get_full_name|default:donation.donor.username }}</p>
+                        <p><strong>Username:</strong> {{ donation.donor.username }}</p>
+                        <p><strong>Email:</strong> {{ donation.donor.email }}</p>
+                    </div>
+                </section>
+            </div>
+            
+            <aside class="detail-sidebar">
+                <div class="action-card">
+                    {% if user.is_authenticated %}
+                        {% if user == donation.donor %}
+                            <p class="info-text">This is your donation</p>
+                            <!-- Admin can manage donation status -->
+                        {% else %}
+                            <a href="{% url 'claim_donation' donation.id %}" class="btn btn-primary btn-block">
+                                Claim This Donation
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <p class="info-text">Please <a href="{% url 'login' %}">login</a> to claim this donation.</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Requests for this donation -->
+                {% if requests %}
+                    <div class="requests-card">
+                        <h3>Food Requests for This Donation</h3>
+                        <div class="requests-list">
+                            {% for request in requests %}
+                                <div class="request-item">
+                                    <p><strong>{{ request.ngo.username }}</strong></p>
+                                    <span class="status-badge status-{{ request.status }}">
+                                        {{ request.get_status_display }}
+                                    </span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </aside>
+        </div>
+    </div>
+</div>
+
+<style>
+    .donation-detail-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .detail-header h1 {
+        margin: 0;
+    }
+    
+    .detail-content {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 30px;
+    }
+    
+    .detail-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #eee;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .detail-item {
+        padding: 10px 0;
+    }
+    
+    .detail-item label {
+        display: block;
+        font-weight: bold;
+        color: #555;
+        margin-bottom: 5px;
+    }
+    
+    .detail-item p {
+        margin: 0;
+        color: #333;
+    }
+    
+    .detail-item.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        padding: 15px;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .donor-info {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 4px;
+    }
+    
+    .action-card, .requests-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #eee;
+    }
+    
+    .requests-card {
+        margin-top: 20px;
+    }
+    
+    .requests-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .request-item {
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .request-item p {
+        margin: 0;
+    }
+    
+    .btn-block {
+        width: 100%;
+    }
+    
+    .info-text {
+        text-align: center;
+        color: #555;
+        padding: 20px 0;
+    }
+    
+    @media (max-width: 768px) {
+        .detail-content {
+            grid-template-columns: 1fr;
+        }
+        
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+{% endblock %}

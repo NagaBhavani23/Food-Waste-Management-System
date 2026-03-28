@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - FeedForward{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="hero-content">
+        <h1>Welcome to FeedForward</h1>
+        <p>Connecting Donors and NGOs to Reduce Food Waste</p>
+        <div class="hero-buttons">
+            {% if user.is_authenticated %}
+                {% if user.donor_profile %}
+                    <a href="{% url 'donate' %}" class="btn btn-primary">Donate Food</a>
+                {% endif %}
+                {% if user.ngo_profile %}
+                    <a href="{% url 'receiver_dashboard' %}" class="btn btn-primary">Receiver Hub</a>
+                {% endif %}
+                <a href="{% url 'view_donations' %}" class="btn btn-secondary">Browse Donations</a>
+            {% else %}
+                <a href="{% url 'register' %}" class="btn btn-primary">Get Started</a>
+                <a href="{% url 'view_donations' %}" class="btn btn-secondary">View Donations</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Section -->
+<section class="stats-section">
+    <div class="stats-container">
+        <div class="stat-card">
+            <h3>{{ total_donations }}</h3>
+            <p>Total Donations</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ total_requests }}</h3>
+            <p>Food Requests</p>
+        </div>
+        <div class="stat-card">
+            <h3>{{ donations.count }}</h3>
+            <p>Available Now</p>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Donations -->
+<section class="featured-section">
+    <div class="container">
+        <h2>Recent Donations</h2>
+        {% if donations %}
+            <div class="donations-grid">
+                {% for donation in donations %}
+                    <div class="donation-card">
+                        <div class="donation-header">
+                            <h3>{{ donation.food_name }}</h3>
+                            <span class="status-badge">{{ donation.get_availability_status_display }}</span>
+                        </div>
+                        <div class="donation-body">
+                            <p><strong>Quantity:</strong> {{ donation.quantity }}</p>
+                            <p><strong>Location:</strong> {{ donation.location }}</p>
+                            <p><strong>Donor:</strong> {{ donation.donor.username }}</p>
+                            <p><strong>Posted:</strong> {{ donation.created_at|date:"d M Y H:i" }}</p>
+                            {% if donation.description %}
+                                <p><strong>Description:</strong> {{ donation.description|truncatewords:20 }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="donation-footer">
+                            <a href="{% url 'donation_detail' donation.id %}" class="btn btn-small">View Details</a>
+                            {% if user.is_authenticated and user != donation.donor %}
+                                <a href="{% url 'claim_donation' donation.id %}" class="btn btn-small btn-success">Claim</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="no-data">No donations available at the moment.</p>
+        {% endif %}
+        <div class="view-all">
+            <a href="{% url 'view_donations' %}" class="btn btn-large">View All Donations</a>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-it-works">
+    <div class="container">
+        <h2>How It Works</h2>
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <h3>Register</h3>
+                <p>Sign up as a Donor or NGO</p>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <h3>Create</h3>
+                <p>Donate food or request food</p>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <h3>Connect</h3>
+                <p>Match donors with NGOs</p>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <h3>Deliver</h3>
+                <p>Complete the donation handover</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

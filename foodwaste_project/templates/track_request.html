@@ -1,0 +1,465 @@
+{% extends 'base.html' %}
+
+{% block title %}Track Food Request - Location Map{% endblock %}
+
+{% block content %}
+<style>
+    .tracking-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+    
+    .tracking-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .tracking-header h1 {
+        color: #333;
+        font-size: 2em;
+        margin-bottom: 10px;
+    }
+    
+    .status-info {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .info-card h3 {
+        margin: 0 0 10px 0;
+        color: #555;
+    }
+    
+    .info-card p {
+        margin: 5px 0;
+        font-size: 0.95em;
+    }
+    
+    .distance-display {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: white;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+    
+    .status-pending { background: orange; }
+    .status-approved { background: green; }
+    .status-rejected { background: red; }
+    .status-completed { background: gray; }
+    
+    #map {
+        width: 100%;
+        height: 600px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .geolocation-controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 20px 0;
+        flex-wrap: wrap;
+    }
+    
+    .btn-locate {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1em;
+        transition: background 0.3s;
+    }
+    
+    .btn-locate:hover {
+        background: #0056b3;
+    }
+    
+    .location-status {
+        text-align: center;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 4px;
+        display: none;
+    }
+    
+    .location-status.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+    }
+    
+    .location-status.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+    }
+    
+    .location-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 30px;
+    }
+    
+    .location-card {
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+    }
+    
+    .location-card h3 {
+        margin-top: 0;
+        color: #333;
+    }
+    
+    .location-card p {
+        margin: 8px 0;
+        font-size: 0.95em;
+    }
+    
+    .coord-display {
+        background: white;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-family: monospace;
+        font-size: 0.9em;
+    }
+    
+    @media (max-width: 768px) {
+        .status-info {
+            grid-template-columns: 1fr;
+        }
+        
+        .location-details {
+            grid-template-columns: 1fr;
+        }
+        
+        .tracking-header h1 {
+            font-size: 1.5em;
+        }
+        
+        #map {
+            height: 400px;
+        }
+    }
+</style>
+
+<div class="tracking-container">
+    <div class="tracking-header">
+        <h1>🗺️ Food Donation Tracking</h1>
+        <p>Real-time location mapping between donor and receiver</p>
+    </div>
+    
+    <!-- Status Information -->
+    <div class="status-info">
+        <div class="info-card">
+            <h3>Donor</h3>
+            <p><strong>{{ donor_name }}</strong></p>
+            <p>{{ donation.food_name }}</p>
+        </div>
+        <div class="info-card">
+            <h3>Distance</h3>
+            {% if distance %}
+                <p class="distance-display">{{ distance }} km</p>
+            {% else %}
+                <p style="color: #999;">Locations not set</p>
+            {% endif %}
+        </div>
+        <div class="info-card">
+            <h3>Receiver</h3>
+            <p><strong>{{ ngo_name }}</strong></p>
+            <span class="status-badge status-{{ food_request.status }}">{{ food_request.get_status_display }}</span>
+        </div>
+    </div>
+    
+    <!-- Map Container -->
+    <div id="map"></div>
+    
+    <!-- Geolocation Controls -->
+    <div class="geolocation-controls">
+        <button class="btn-locate" onclick="captureMyLocation()" title="Capture your current location">
+            📍 Capture My Location
+        </button>
+        <button class="btn-locate" onclick="refreshMap()" title="Refresh map data">
+            🔄 Refresh Map
+        </button>
+    </div>
+    
+    <div id="locationStatus" class="location-status"></div>
+    
+    <!-- Location Details -->
+    <div class="location-details">
+        <div class="location-card">
+            <h3>🍽️ Donor Location</h3>
+            <p><strong>Name:</strong> {{ donor_name }}</p>
+            <p><strong>Address:</strong> {{ donation.location }}</p>
+            {% if donation.latitude and donation.longitude %}
+                <div class="coord-display">
+                    Lat: {{ donation.latitude }}<br>
+                    Lon: {{ donation.longitude }}
+                </div>
+            {% else %}
+                <p style="color: #999; font-style: italic;">Location not captured yet</p>
+            {% endif %}
+        </div>
+        
+        <div class="location-card">
+            <h3>🏘️ Receiver Location</h3>
+            <p><strong>Name:</strong> {{ ngo_name }}</p>
+            <p><strong>Address:</strong> {{ food_request.location }}</p>
+            {% if food_request.latitude and food_request.longitude %}
+                <div class="coord-display">
+                    Lat: {{ food_request.latitude }}<br>
+                    Lon: {{ food_request.longitude }}
+                </div>
+            {% else %}
+                <p style="color: #999; font-style: italic;">Location not captured yet</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet.js CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// Global variables
+let map;
+let donorMarker;
+let receiverMarker;
+let routeLine;
+const requestId = {{ food_request.id }};
+const donorLat = {{ donation.latitude|default:"null" }};
+const donorLon = {{ donation.longitude|default:"null" }};
+const receiverLat = {{ food_request.latitude|default:"null" }};
+const receiverLon = {{ food_request.longitude|default:"null" }};
+
+// Initialize map on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initMap();
+    setupRefreshInterval();
+});
+
+function initMap() {
+    // Default center (India center as fallback)
+    let mapCenter = [20.5937, 78.9629];
+    let zoomLevel = 4;
+    
+    // Adjust center based on available coordinates
+    if (donorLat && donorLon && receiverLat && receiverLon) {
+        mapCenter = [(donorLat + receiverLat) / 2, (donorLon + receiverLon) / 2];
+        zoomLevel = 12;
+    } else if (donorLat && donorLon) {
+        mapCenter = [donorLat, donorLon];
+        zoomLevel = 12;
+    } else if (receiverLat && receiverLon) {
+        mapCenter = [receiverLat, receiverLon];
+        zoomLevel = 12;
+    }
+    
+    // Create map
+    map = L.map('map').setView(mapCenter, zoomLevel);
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Add markers if locations exist
+    if (donorLat && donorLon) {
+        addDonorMarker(donorLat, donorLon);
+    }
+    
+    if (receiverLat && receiverLon) {
+        addReceiverMarker(receiverLat, receiverLon);
+    }
+    
+    // Draw route if both locations exist
+    if (donorLat && donorLon && receiverLat && receiverLon) {
+        drawRoute();
+    }
+}
+
+function addDonorMarker(lat, lon) {
+    const donorIcon = L.divIcon({
+        html: `<div style="background: #ff9800; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold;">🍽️</div>`,
+        iconSize: [32, 32],
+        className: 'donor-marker'
+    });
+    
+    donorMarker = L.marker([lat, lon], {icon: donorIcon})
+        .addTo(map)
+        .bindPopup(`<b>Donor Location</b><br>{{ donor_name }}<br>{{ donation.food_name }}`);
+}
+
+function addReceiverMarker(lat, lon) {
+    const receiverIcon = L.divIcon({
+        html: `<div style="background: #2196f3; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold;">🏘️</div>`,
+        iconSize: [32, 32],
+        className: 'receiver-marker'
+    });
+    
+    receiverMarker = L.marker([lat, lon], {icon: receiverIcon})
+        .addTo(map)
+        .bindPopup(`<b>Receiver Location</b><br>{{ ngo_name }}`);
+}
+
+function drawRoute() {
+    // Remove existing route
+    if (routeLine) {
+        map.removeLayer(routeLine);
+    }
+    
+    // Draw line between donor and receiver
+    routeLine = L.polyline(
+        [[donorLat, donorLon], [receiverLat, receiverLon]],
+        {color: '#4CAF50', weight: 3, opacity: 0.7, dashArray: '5, 5'}
+    ).addTo(map);
+    
+    // Fit map to include both markers
+    if (donorMarker && receiverMarker) {
+        map.fitBounds([
+            [donorLat, donorLon],
+            [receiverLat, receiverLon]
+        ], {padding: [50, 50]});
+    }
+}
+
+function captureMyLocation() {
+    if ("geolocation" in navigator) {
+        showStatus('Getting your location...', 'info');
+        
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Determine if user is donor or receiver
+                const userType = '{{ user.id }}' === '{{ donation.donor.id }}' ? 'donation' : 'request';
+                
+                // Save location to server
+                saveLocationToServer(lat, lon, userType);
+            },
+            function(error) {
+                showStatus('Error: ' + error.message, 'error');
+            }
+        );
+    } else {
+        showStatus('Geolocation is not supported by your browser', 'error');
+    }
+}
+
+function saveLocationToServer(lat, lon, type) {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                      document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+    
+    fetch('{% url "save_location" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({
+            latitude: lat,
+            longitude: lon,
+            type: type,
+            id: requestId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showStatus('✓ Location saved successfully!', 'success');
+            // Refresh map after 1 second
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showStatus('Error: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        showStatus('Error: ' + error.message, 'error');
+    });
+}
+
+function refreshMap() {
+    showStatus('Refreshing location data...', 'info');
+    
+    fetch(`{% url "get_location_data" 0 %}`.replace('0', requestId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.donor.latitude && data.donor.longitude) {
+                // Reload to show updated data
+                location.reload();
+            } else {
+                showStatus('One or both locations not yet captured', 'error');
+            }
+        })
+        .catch(error => {
+            showStatus('Error refreshing: ' + error.message, 'error');
+        });
+}
+
+function showStatus(message, type) {
+    const statusEl = document.getElementById('locationStatus');
+    statusEl.textContent = message;
+    statusEl.className = 'location-status ' + type;
+    
+    if (type !== 'error') {
+        setTimeout(() => {
+            statusEl.className = 'location-status';
+        }, 3000);
+    }
+}
+
+// Auto-refresh every 30 seconds
+function setupRefreshInterval() {
+    // Only refresh if this is an accepted request
+    if ('{{ food_request.status }}' === 'approved') {
+        setInterval(() => {
+            fetch(`{% url "get_location_data" 0 %}`.replace('0', requestId))
+                .then(response => response.json())
+                .then(data => {
+                    // Could update markers here with live data
+                    // For now, just keep the interval running
+                })
+                .catch(error => {
+                    console.log('Auto-refresh error:', error);
+                });
+        }, 30000); // Every 30 seconds
+    }
+}
+</script>
+
+{% endblock %}
