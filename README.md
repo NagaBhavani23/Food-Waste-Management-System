@@ -1,21 +1,20 @@
 # Food Waste Management System 🍲
 
-A full-stack web application built with **Django** that connects food donors (hotels, restaurants) with NGOs to reduce food wastage. It provides a platform to list surplus food, track donations, and manage distribution efficiently.
+A full-stack web application built with Django that connects food donors (hotels, restaurants) with NGOs to reduce food wastage. It provides a platform to list surplus food, track donations, and manage distribution efficiently.
 
 ## 🚀 Features
 
-- **User Authentication:** Secure login/signup for Donors, NGOs, and Admins using Django's built-in Auth system.
-- **Food Donation Listings:** Donors can create, update, and delete food listings with quantity and expiry details.
-- **Real-time Dashboard:** Admins can monitor donation trends and distribution status.
-- **Responsive UI:** A clean, mobile-friendly interface built with HTML5, CSS3, and JavaScript.
-- **Search & Filter:** Find available food by location or category.
+- User Authentication: Secure login/signup for Donors, NGOs, and Admins using Django's built-in Auth system.
+- Food Donation Listings: Donors can create, update, and delete food listings with quantity and expiry details.
+- Real-time Dashboard: Admins can monitor donation trends and distribution status.
+- Responsive UI: A clean, mobile-friendly interface built with HTML5, CSS3, and JavaScript.
+- Search & Filter: Find available food by location or category.
 
 ## 🛠️ Tech Stack
 
-- **Backend:** Python, Django
-- **Frontend:** HTML5, CSS3, JavaScript (Vanilla/jQuery)
-- **Database:** SQLite (Default) or PostgreSQL/MySQL
-- **Styling:** Bootstrap (Optional)
+- Backend: Python, Django
+- Frontend: HTML5, CSS3, JavaScript
+- Database: SQLite (Default) 
 
 ## 📥 Installation & Setup
 
